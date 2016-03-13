@@ -1,0 +1,11 @@
+language: java
+jdk:
+  - oraclejdk7
+script:
+  - mvn test
+branches:
+  only:
+    - master
+notifications:
+  email:
+    - litao.buptsse@gmail.com
