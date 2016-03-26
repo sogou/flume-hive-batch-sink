@@ -220,9 +220,8 @@ public class HiveBatchSink extends AbstractSink implements Configurable {
   }
 
   private void updateLogDetail(int onlineServerNum) {
-    HiveSinkDetailDao dao = new HiveSinkDetailDao(dbConnectURL, zookeeperServiceName);
     List<String> logdateList = null;
-    try {
+    try (HiveSinkDetailDao dao = new HiveSinkDetailDao(dbConnectURL, zookeeperServiceName)) {
       dao.connect();
       logdateList = dao.getFinishedLogdateList(onlineServerNum);
       if (logdateList.size() > 0) {
@@ -230,12 +229,6 @@ public class HiveBatchSink extends AbstractSink implements Configurable {
       }
     } catch (SQLException e) {
       LOG.error(CommonUtils.getStackTraceStr(e));
-    } finally {
-      try {
-        dao.close();
-      } catch (SQLException e) {
-        LOG.error(CommonUtils.getStackTraceStr(e));
-      }
     }
 
     if (logdateList != null && logdateList.size() > 0) {
@@ -357,7 +350,7 @@ public class HiveBatchSink extends AbstractSink implements Configurable {
     Channel channel = getChannel();
     Transaction transaction = channel.getTransaction();
     // TODO no need to store all the events content in array list, which will increase memory usage
-    List<Event> events = new ArrayList<Event>();
+    List<Event> events = new ArrayList<>();
     transaction.begin();
     try {
       int txnEventCount;
@@ -430,7 +423,7 @@ public class HiveBatchSink extends AbstractSink implements Configurable {
     String file = path + DIRECTORY_DELIMITER + fileName;
     String logdate = HiveUtils.getPartitionValue(partition, "logdate");
     List<String> values = HiveUtils.getPartitionValues(partition);
-    List<HiveBatchWriter.Callback> closeCallbacks = new ArrayList<HiveBatchWriter.Callback>();
+    List<HiveBatchWriter.Callback> closeCallbacks = new ArrayList<>();
 
     HiveBatchWriter.Callback addPartitionCallback = new AddPartitionCallback(dbName, tableName,
         values, path);
@@ -465,7 +458,7 @@ public class HiveBatchSink extends AbstractSink implements Configurable {
     this.isRunning = true;
     this.writerCounter = new AtomicLong(0);
     this.activeWriters = new WriterLinkedHashMap(maxOpenFiles);
-    this.idleWriters = new ArrayBlockingQueue<HiveBatchWriter>(idleQueueSize, true);
+    this.idleWriters = new ArrayBlockingQueue<>(idleQueueSize, true);
     this.idleWriterCloseThreadPool = Executors.newFixedThreadPool(idleWriterCloseThreadPoolSize,
         new ThreadFactoryBuilder().setNameFormat("idleWriterCloseThread-%d").build());
     for (int i = 0; i < idleWriterCloseThreadPoolSize; i++) {
@@ -493,15 +486,15 @@ public class HiveBatchSink extends AbstractSink implements Configurable {
 
   @Override
   public synchronized void stop() {
-    for (Map.Entry<String, HiveBatchWriter> entry : activeWriters.entrySet()) {
-      LOG.info("Closing {}", entry.getKey());
+    activeWriters.forEach((key, value) -> {
+      LOG.info("Closing {}", key);
       try {
-        entry.getValue().close();
+        value.close();
       } catch (Exception e) {
-        LOG.warn("Exception while closing " + entry.getKey() + ". " +
-            "Exception follows.", e);
+        LOG.warn("Exception while closing " + key + ". Exception follows.", e);
       }
-    }
+    });
+
     activeWriters.clear();
     activeWriters = null;
     sinkCounter.stop();

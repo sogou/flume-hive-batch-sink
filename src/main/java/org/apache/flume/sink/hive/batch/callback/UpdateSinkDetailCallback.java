@@ -55,8 +55,7 @@ public class UpdateSinkDetailCallback implements HiveBatchWriter.Callback {
 
   @Override
   public void run() {
-    HiveSinkDetailDao dao = new HiveSinkDetailDao(connectURL, name);
-    try {
+    try (HiveSinkDetailDao dao = new HiveSinkDetailDao(connectURL, name)) {
       dao.connect();
       long receiveCount = 0;
       long sinkCount = 0;
@@ -72,12 +71,6 @@ public class UpdateSinkDetailCallback implements HiveBatchWriter.Callback {
       }
     } catch (SQLException e) {
       LOG.error(CommonUtils.getStackTraceStr(e));
-    } finally {
-      try {
-        dao.close();
-      } catch (SQLException e) {
-        LOG.error("Fail to close dbManager", e);
-      }
     }
   }
 }

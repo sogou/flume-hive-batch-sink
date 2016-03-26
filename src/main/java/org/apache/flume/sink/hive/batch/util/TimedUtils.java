@@ -92,8 +92,8 @@ public class TimedUtils {
       return;
     }
 
-    Map<String, Long> counters = new HashMap<String, Long>();
-    for (Event event : events) {
+    Map<String, Long> counters = new HashMap<>();
+    events.stream().forEach(event -> {
       Map<String, String> headers = event.getHeaders();
 
       String category = headers.containsKey(categoryKey) ?
@@ -113,31 +113,29 @@ public class TimedUtils {
         counters.put(key, 0L);
       }
       counters.put(key, counters.get(key) + 1);
-    }
+    });
 
     long updateTimestamp = System.currentTimeMillis();
 
     synchronized (fiveMinMap) {
-      for (Map.Entry<String, Long> entry : counters.entrySet()) {
-        String[] arr = entry.getKey().split("\t");
+      counters.forEach((key, num) -> {
+        String[] arr = key.split("\t");
         String category = arr[0];
         String fiveMin = arr[1];
-        long num = entry.getValue();
 
         if (!fiveMinMap.containsKey(category)) {
-          fiveMinMap.put(category, new FiveMinLinkedHashMap<String, TimestampCount>());
+          fiveMinMap.put(category, new FiveMinLinkedHashMap());
         }
         if (!fiveMinMap.get(category).containsKey(fiveMin)) {
           fiveMinMap.get(category).put(fiveMin, new TimestampCount());
         }
 
         fiveMinMap.get(category).get(fiveMin).addToCountAndTimestamp(num, updateTimestamp);
-      }
+      });
     }
   }
 
-  public static class FiveMinLinkedHashMap<String, TimestampCount>
-      extends LinkedHashMap<String, TimestampCount> {
+  public static class FiveMinLinkedHashMap extends LinkedHashMap<String, TimestampCount> {
     private static final int DEFAULT_MAX_SIZE = 500;
     private int maxSize = DEFAULT_MAX_SIZE;
 
@@ -152,11 +150,7 @@ public class TimedUtils {
 
     @Override
     protected boolean removeEldestEntry(Map.Entry<String, TimestampCount> eldest) {
-      if (size() > maxSize) {
-        return true;
-      } else {
-        return false;
-      }
+      return size() > maxSize;
     }
   }
 

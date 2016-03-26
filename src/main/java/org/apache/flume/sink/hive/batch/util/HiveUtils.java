@@ -19,7 +19,6 @@
 
 package org.apache.flume.sink.hive.batch.util;
 
-import com.google.common.base.Joiner;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient;
 import org.apache.hadoop.hive.metastore.api.*;
@@ -29,6 +28,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Created by Tao Li on 2/16/16.
@@ -53,20 +54,20 @@ public class HiveUtils {
                                   List<String> values, String location) throws TException {
     int createTime = (int) (System.currentTimeMillis() / 1000);
     int lastAccessTime = 0;
-    Map<String, String> parameters = new HashMap<String, String>();
+    Map<String, String> parameters = new HashMap<>();
 
     List<FieldSchema> cols = getFields(client, dbName, tableName);
     String inputFormat = "org.apache.hadoop.hive.ql.io.orc.OrcInputFormat";
     String outputFormat = "org.apache.hadoop.hive.ql.io.orc.OrcOutputFormat";
     boolean compressed = false;
     int numBuckets = -1;
-    Map<String, String> serDeInfoParameters = new HashMap<String, String>();
+    Map<String, String> serDeInfoParameters = new HashMap<>();
     serDeInfoParameters.put("serialization.format", "1");
     SerDeInfo serDeInfo = new SerDeInfo(
         null, "org.apache.hadoop.hive.ql.io.orc.OrcSerde", serDeInfoParameters);
-    List<String> bucketCols = new ArrayList<String>();
-    List<Order> sortCols = new ArrayList<Order>();
-    Map<String, String> sdParameters = new HashMap<String, String>();
+    List<String> bucketCols = new ArrayList<>();
+    List<Order> sortCols = new ArrayList<>();
+    Map<String, String> sdParameters = new HashMap<>();
     StorageDescriptor sd = new StorageDescriptor(cols, location, inputFormat, outputFormat,
         compressed, numBuckets, serDeInfo, bucketCols, sortCols, sdParameters);
 
@@ -96,16 +97,11 @@ public class HiveUtils {
                                                      String dbName, String tableName)
       throws TException {
     Properties properties = new Properties();
-
-    List<FieldSchema> fields = HiveUtils.getFields(dbName, tableName);
-    List<String> columnNames = new ArrayList<String>();
-    List<String> columnTypes = new ArrayList<String>();
-    for (FieldSchema field : fields) {
-      columnNames.add(field.getName());
-      columnTypes.add(field.getType());
-    }
-    String columnNameProperty = Joiner.on(",").join(columnNames);
-    String columnTypeProperty = Joiner.on(",").join(columnTypes);
+    List<FieldSchema> fields = HiveUtils.getFields(client, dbName, tableName);
+    String columnNameProperty = fields.stream()
+        .map(FieldSchema::getName).collect(Collectors.joining(","));
+    String columnTypeProperty = fields.stream()
+        .map(FieldSchema::getType).collect(Collectors.joining(","));
     properties.setProperty(serdeConstants.LIST_COLUMNS, columnNameProperty);
     properties.setProperty(serdeConstants.LIST_COLUMN_TYPES, columnTypeProperty);
 
@@ -168,10 +164,7 @@ public class HiveUtils {
   }
 
   public static List<String> getPartitionValues(String partition) {
-    List<String> values = new ArrayList<String>();
-    for (String part : partition.split("/")) {
-      values.add(part.split("=")[1]);
-    }
-    return values;
+    return Stream.of(partition.split("/"))
+        .map(part -> part.split("=")[1]).collect(Collectors.toList());
   }
 }

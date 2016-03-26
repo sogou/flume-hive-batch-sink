@@ -27,10 +27,13 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 /**
  * Created by Tao Li on 2/5/15.
@@ -252,16 +255,15 @@ public class ZKService {
 
   public List<ServerInfo> getAllServerInfos() throws KeeperException, InterruptedException {
     // FIXME need to call sync() to get latest view
-    List<ServerInfo> serverInfos = new ArrayList<ServerInfo>();
-    for (String path : client.zk.getChildren(getRootPath(), false)) {
+    return client.zk.getChildren(getRootPath(), false).stream().map(path -> {
       String[] info = path.split("_");
       if (info.length == 3) {
-        serverInfos.add(new ServerInfo(info[0], Long.parseLong(info[1]), info[2]));
+        return new ServerInfo(info[0], Long.parseLong(info[1]), info[2]);
       } else {
         LOG.error("Invalid server znode path: " + path);
+        return null;
       }
-    }
-    return serverInfos;
+    }).filter(Objects::nonNull).collect(Collectors.toList());
   }
 
   public ServerInfo getLeader() throws KeeperException, InterruptedException {

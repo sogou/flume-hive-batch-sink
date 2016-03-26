@@ -32,7 +32,7 @@ import java.util.List;
 /**
  * Created by Tao Li on 2016/3/2.
  */
-public class HiveSinkDetailDao {
+public class HiveSinkDetailDao implements AutoCloseable {
   private Logger LOG = LoggerFactory.getLogger(HiveSinkDetailDao.class);
 
   private final String TABLE_NAME = "hive_sink_detail";
@@ -49,6 +49,7 @@ public class HiveSinkDetailDao {
     dbManager.connect();
   }
 
+  @Override
   public void close() throws SQLException {
     dbManager.close();
   }
@@ -61,15 +62,10 @@ public class HiveSinkDetailDao {
             + "WHERE t.n >= %s",
         TABLE_NAME, name, onlineServerNum
     );
-    ResultSet rs = dbManager.executeQuery(sql);
-    List<String> logdateList = new ArrayList<String>();
-    try {
+    List<String> logdateList = new ArrayList<>();
+    try (ResultSet rs = dbManager.executeQuery(sql)) {
       while (rs.next()) {
         logdateList.add(rs.getString("logdate"));
-      }
-    } finally {
-      if (rs != null) {
-        rs.close();
       }
     }
     return logdateList;
@@ -92,12 +88,8 @@ public class HiveSinkDetailDao {
         "SELECT * FROM %s WHERE name='%s' AND logdate='%s' AND hostname='%s'",
         TABLE_NAME, this.name, logdate, hostName
     );
-    ResultSet rs = dbManager.executeQuery(sql);
-    try {
+    try (ResultSet rs = dbManager.executeQuery(sql)) {
       return rs.next();
-    } finally {
-      if (rs != null)
-        rs.close();
     }
   }
 

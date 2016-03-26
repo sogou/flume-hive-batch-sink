@@ -32,9 +32,9 @@ import java.util.Map;
  */
 public class TimedSinkCounter extends SinkCounter implements TimedSinkCounterMBean {
   private Map<String, TimedUtils.TimestampCount> eventDrainSuccessCountInFiveMinMap =
-      new TimedUtils.FiveMinLinkedHashMap<String, TimedUtils.TimestampCount>();
+      new TimedUtils.FiveMinLinkedHashMap();
   private Map<String, Map<String, TimedUtils.TimestampCount>> categoryEventDrainSuccessCountInFiveMinMap =
-      new HashMap<String, Map<String, TimedUtils.TimestampCount>>();
+      new HashMap<>();
 
   private static final String COUNTER_EVENT_DRAIN_SUCCESS_IN_FIVE_MIN =
       "sink.event.drain.sucess.5min";

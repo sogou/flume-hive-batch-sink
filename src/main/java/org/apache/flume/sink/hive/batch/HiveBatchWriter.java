@@ -60,12 +60,10 @@ public class HiveBatchWriter {
 
     OrcFile.WriterOptions writerOptions = OrcFile.writerOptions(conf);
     writerOptions.inspector(deserializer.getObjectInspector());
-    this.writer = OrcFile.createWriter(new Path(file), writerOptions);
+    writer = OrcFile.createWriter(new Path(file), writerOptions);
 
-    if (this.initCallbacks != null) {
-      for (Callback callback : this.initCallbacks) {
-        callback.run();
-      }
+    if (initCallbacks != null) {
+      initCallbacks.forEach(Callback::run);
     }
   }
 
@@ -78,9 +76,7 @@ public class HiveBatchWriter {
     writer.close();
 
     if (closeCallbacks != null) {
-      for (Callback callback : closeCallbacks) {
-        callback.run();
-      }
+      closeCallbacks.forEach(Callback::run);
     }
   }
 
